@@ -3,7 +3,7 @@ cmake_minimum_required (VERSION 3.0 FATAL_ERROR)
 # KDE Application Version, managed by release script
 set (KDE_APPLICATIONS_VERSION_MAJOR "18")
 set (KDE_APPLICATIONS_VERSION_MINOR "08")
-set (KDE_APPLICATIONS_VERSION_MICRO "2")
+set (KDE_APPLICATIONS_VERSION_MICRO "1")
 set (KDE_APPLICATIONS_VERSION "${KDE_APPLICATIONS_VERSION_MAJOR}.${KDE_APPLICATIONS_VERSION_MINOR}.${KDE_APPLICATIONS_VERSION_MICRO}")
 
 project(gwenview VERSION ${KDE_APPLICATIONS_VERSION})
@@ -55,20 +55,20 @@ ecm_setup_version(${KDE_APPLICATIONS_VERSION}
 )
 
 ## CMake options
-set(GWENVIEW_SEMANTICINFO_BACKEND_NONE OFF)
+set(GWENVIEW_SEMANTICINFO_BACKEND_NONE ON)
 set(GWENVIEW_SEMANTICINFO_BACKEND_FAKE OFF)
 set(GWENVIEW_SEMANTICINFO_BACKEND_BALOO OFF)
 
-set(GWENVIEW_SEMANTICINFO_BACKEND "Baloo" CACHE STRING "Semantic info backend for Gwenview (Baloo/Fake/None)")
+#set(GWENVIEW_SEMANTICINFO_BACKEND "Baloo" CACHE STRING "Semantic info backend for Gwenview (Baloo/Fake/None)")
 
 # Init GWENVIEW_SEMANTICINFO_BACKEND_* vars
-if(GWENVIEW_SEMANTICINFO_BACKEND STREQUAL "None")
-    set(GWENVIEW_SEMANTICINFO_BACKEND_NONE ON)
-elseif(GWENVIEW_SEMANTICINFO_BACKEND STREQUAL "Fake")
-    set(GWENVIEW_SEMANTICINFO_BACKEND_FAKE ON)
-else()
-    set(GWENVIEW_SEMANTICINFO_BACKEND_BALOO ON)
-endif()
+#if(GWENVIEW_SEMANTICINFO_BACKEND STREQUAL "None")
+#    set(GWENVIEW_SEMANTICINFO_BACKEND_NONE ON)
+#elseif(GWENVIEW_SEMANTICINFO_BACKEND STREQUAL "Fake")
+#    set(GWENVIEW_SEMANTICINFO_BACKEND_FAKE ON)
+#else()
+#    set(GWENVIEW_SEMANTICINFO_BACKEND_BALOO ON)
+#endif()
 
 find_package(Qt5 ${QT_MIN_VERSION} CONFIG REQUIRED Core Widgets Concurrent Svg OpenGL PrintSupport)
 find_package(Qt5DBus ${QT_MIN_VERSION} CONFIG QUIET)
@@ -110,6 +110,7 @@ find_package(KF5Kipi)
 if (KF5Kipi_FOUND)
    set(KIPI_FOUND true)
 endif()
+set(KIPI_FOUND false)
 # set_package_properties(Kipi PROPERTIES URL"http://www.kipi-plugins.org" DESCRIPTION "Provides various image manipulation and export features" TYPE OPTIONAL)
 
 find_package(LCMS2)
@@ -157,3 +158,7 @@ add_subdirectory(doc)
 add_subdirectory(kconf_update)
 
 feature_summary(WHAT ALL INCLUDE_QUIET_PACKAGES FATAL_ON_MISSING_REQUIRED_PACKAGES)
+ki18n_install(po)
+if (KF5DocTools_FOUND)
+ kdoctools_install(po)
+endif()

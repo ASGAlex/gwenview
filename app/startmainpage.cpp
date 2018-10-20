@@ -86,14 +86,8 @@ struct StartMainPagePrivate : public Ui_StartMainPage
 
     void setupSearchUi()
     {
-#ifdef GWENVIEW_SEMANTICINFO_BACKEND_BALOO
-        mTagView->setModel(TagModel::createAllTagsModel(mTagView, mGvCore->semanticInfoBackEnd()));
-        mTagView->show();
-        mTagLabel->hide();
-#else
         mTagView->hide();
         mTagLabel->hide();
-#endif
     }
 
     void updateHistoryTab()
@@ -171,7 +165,7 @@ StartMainPage::StartMainPage(QWidget* parent, GvCore* gvCore)
     connect(d->mBookmarksView, &KFilePlacesView::urlChanged, this, &StartMainPage::urlSelected);
 
     // Tag view
-    connect(d->mTagView, &QListView::clicked, this, &StartMainPage::slotTagViewClicked);
+    //connect(d->mTagView, &QListView::clicked, this, &StartMainPage::slotTagViewClicked);
 
     // Recent folders view
     connect(d->mRecentFoldersView, &Gwenview::ThumbnailView::indexActivated,
@@ -189,6 +183,11 @@ StartMainPage::StartMainPage(QWidget* parent, GvCore* gvCore)
     connect(GwenviewConfig::self(), &GwenviewConfig::configChanged, this, &StartMainPage::loadConfig);
 
     d->mRecentFoldersView->setFocus();
+    
+    d->mTagView->hide();
+    d->mTagLabel->hide();
+    d->tagsTab->hide();
+    d->mPlacesTagsWidget->removeTab(1);
 }
 
 StartMainPage::~StartMainPage()

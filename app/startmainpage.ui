@@ -40,6 +40,22 @@
      </item>
      <item>
       <widget class="QTabWidget" name="mHistoryWidget">
+       <property name="styleSheet">
+        <string notr="true">QTabBar::tab {
+	background-color: rgb(77, 77, 77);
+	color: rgb(223, 223, 223);
+}
+QTabBar::tab:selected {
+	background-color: rgb(124, 124, 124);
+	color: rgb(223, 223, 223);
+}</string>
+       </property>
+       <property name="tabPosition">
+        <enum>QTabWidget::North</enum>
+       </property>
+       <property name="tabShape">
+        <enum>QTabWidget::Triangular</enum>
+       </property>
        <property name="currentIndex">
         <number>0</number>
        </property>
@@ -86,10 +102,26 @@
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
+     <property name="styleSheet">
+      <string notr="true">QTabBar::tab {
+	background-color: rgb(77, 77, 77);
+	color: rgb(223, 223, 223);
+}
+QTabBar::tab:selected {
+	background-color: rgb(124, 124, 124);
+	color: rgb(223, 223, 223);
+}</string>
+     </property>
+     <property name="tabShape">
+      <enum>QTabWidget::Triangular</enum>
+     </property>
      <property name="currentIndex">
       <number>0</number>
      </property>
      <property name="documentMode">
+      <bool>true</bool>
+     </property>
+     <property name="tabBarAutoHide">
       <bool>true</bool>
      </property>
      <widget class="QWidget" name="placesTab">
@@ -116,6 +148,9 @@
       </layout>
      </widget>
      <widget class="QWidget" name="tagsTab">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <attribute name="title">
        <string>Tags</string>
       </attribute>

@@ -40,6 +40,214 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Cambridge, MA 02110-1301, USA
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(_WIN32)
+#include <time.h>
+#include <math.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <string.h>
+#include <windows.h>
+#include <accctrl.h>
+#include <aclapi.h>
+
+static PSECURITY_DESCRIPTOR
+create_sd (int permissions)
+{
+  PSECURITY_DESCRIPTOR pSD = NULL;
+  int i;
+  int j;
+  EXPLICIT_ACCESS ea[3];
+  PSID sids[3] = { NULL, NULL, NULL };
+  WELL_KNOWN_SID_TYPE sidtypes[3] = { WinCreatorOwnerSid, WinCreatorGroupSid, WinWorldSid };
+  int ea_len = 0;
+  DWORD dwRes, dwDisposition;
+ PACL pACL = NULL;
+
+  /* Initialize a security descriptor. */
+  pSD = (PSECURITY_DESCRIPTOR) LocalAlloc (LPTR, SECURITY_DESCRIPTOR_MIN_LENGTH); 
+  if (NULL == pSD) 
+  { 
+    errno = ENOMEM;
+    return NULL;
+  }
+
+  if (!InitializeSecurityDescriptor (pSD, SECURITY_DESCRIPTOR_REVISION))
+  {  
+    LocalFree (pSD);
+    errno = EIO;
+    return NULL;
+  }
+
+  for (i = 0; i < 3; i++)
+  {
+    BOOL b;
+    DWORD bytes;
+    int imasked = permissions & (07 << (2 - i));
+    if (!imasked)
+      continue;
+
+    bytes = SECURITY_MAX_SID_SIZE;
+    sids[ea_len] = (PSID) LocalAlloc (LMEM_FIXED, bytes);
+    if (NULL == sids[ea_len])
+    { 
+      errno = ENOMEM;
+      LocalFree (pSD);
+      for (j = 0; j < ea_len; j++)
+      {
+        if (sids[j] != NULL)
+        {
+          LocalFree (sids[j]);
+          sids[j] = NULL;
+        }
+      }
+      return NULL;
+    }
+
+    b = CreateWellKnownSid (sidtypes[i], NULL, sids[ea_len], &bytes);
+    if (!b)
+    {
+      errno = EINVAL;
+      LocalFree (pSD);
+      for (j = 0; j < ea_len; j++)
+      {
+        if (sids[j] != NULL)
+        {
+          LocalFree (sids[j]);
+          sids[j] = NULL;
+        }
+      }
+      return NULL;
+   }
+
+    /* Initialize an EXPLICIT_ACCESS structure for an ACE. */
+    ZeroMemory (&ea[ea_len], sizeof(EXPLICIT_ACCESS));
+    bytes = 0;
+    if (01 & imasked)
+      bytes = bytes | GENERIC_READ;
+    if (02 & imasked)
+      bytes = bytes | GENERIC_WRITE;
+    if (04 & imasked)
+      bytes = bytes | GENERIC_EXECUTE;
+    ea[ea_len].grfAccessPermissions = bytes;
+    ea[ea_len].grfAccessMode = SET_ACCESS;
+   ea[ea_len].grfInheritance= NO_INHERITANCE;
+    ea[ea_len].Trustee.TrusteeForm = TRUSTEE_IS_SID;
+   ea[ea_len].Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
+    ea[ea_len].Trustee.ptstrName  = (LPTSTR) sids[ea_len];
+    ea_len = ea_len + 1;
+  }
+
+  /* Create a new ACL that contains the new ACEs. */
+  dwRes = SetEntriesInAcl (ea_len, ea, NULL, &pACL);
+  if (ERROR_SUCCESS != dwRes) 
+  {
+    errno = EIO;
+    LocalFree (pSD);
+   for (j = 0; j < ea_len; j++)
+    {
+      if (sids[j] != NULL)
+      {
+        LocalFree (sids[j]);
+        sids[j] = NULL;
+     }
+    }
+    return NULL;
+  }
+
+  for (j = 0; j < ea_len; j++)
+ {
+    if (sids[j] != NULL)
+    {
+      LocalFree (sids[j]);
+      sids[j] = NULL;
+   }
+  }
+
+  /* Add the ACL to the security descriptor. */
+  if (!SetSecurityDescriptorDacl (pSD,
+         TRUE,     // bDaclPresent flag
+          pACL,
+          FALSE))   // not a default DACL
+  {
+    errno = EIO;
+   LocalFree (pSD);
+    LocalFree (pACL);
+    return NULL;
+  } 
+
+ return pSD;
+}
+
+static void
+free_sd (PSECURITY_DESCRIPTOR sd)
+{
+  BOOL b, present, defaulted;
+  PACL pACL = NULL;
+  present = FALSE;
+  b = GetSecurityDescriptorDacl (sd, &present, &pACL, &defaulted);
+  if (b && present && !defaulted && pACL)
+    LocalFree (pACL);
+  LocalFree (sd);
+}
+
+static void
+rand_template (char *_template, size_t l)
+{
+  int i;
+  for (i = l - 6; i < l; i++)
+  {
+    int r = rand ();
+    if ((r / (RAND_MAX + 1)) > ((RAND_MAX + 1) / 2))
+      _template[i] = 'A' + (double) rand () / (RAND_MAX + 1) * ('Z' - 'A');
+    else
+      _template[i] = 'a' + (double) rand () / (RAND_MAX + 1) * ('z' - 'a');
+  }
+}
+
+static char *
+mkdtemp (char *_template)
+{
+  int i;
+  size_t l;
+  BOOL b;
+  SECURITY_ATTRIBUTES sa;
+  
+  if (_template == NULL)
+  {
+    errno = EINVAL;
+    return NULL;
+ }
+  l = strlen (_template);
+  if (l < 6 || strcmp (&_template[l - 6], "XXXXXX") != 0)
+  {
+    errno = EINVAL;
+    return NULL;
+  }
+  srand(time (NULL));
+  sa.nLength = sizeof (sa);
+  sa.lpSecurityDescriptor = create_sd (0700);
+  sa.bInheritHandle = FALSE;
+  do
+  {
+    rand_template (_template, l);
+    SetLastError (0);
+    b = CreateDirectoryA (_template, &sa);
+  } while (!b && GetLastError () == ERROR_ALREADY_EXISTS);
+  free_sd (sa.lpSecurityDescriptor);
+  if (!b)
+  {
+    errno = EIO;
+    return NULL;
+  }
+  else
+  {
+    errno = 0;
+    return _template;
+  }
+}
+#endif
+
+
 namespace Gwenview
 {
 namespace FileUtils

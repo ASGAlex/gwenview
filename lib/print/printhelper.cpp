@@ -30,7 +30,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #include <QPainter>
 #include <QPrinter>
 #include <QPrintDialog>
-#include <QUrl>
 
 // KDE
 #include <KLocalizedString>
@@ -119,7 +118,6 @@ void PrintHelper::print(Document::Ptr doc)
 {
     doc->waitUntilLoaded();
     QPrinter printer;
-    printer.setDocName(doc->url().fileName());
 
     PrintOptionsPage* optionsPage = new PrintOptionsPage(doc->size());
     optionsPage->loadConfig();

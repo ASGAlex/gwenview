@@ -69,7 +69,7 @@ public:
 
     int operator()(int n)
     {
-        return rand_r(&mSeed) % n;
+        return rand() % n;
     }
 
 private:
